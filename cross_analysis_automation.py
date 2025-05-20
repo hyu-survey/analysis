@@ -38,9 +38,9 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
 
     while idx < n:
       q1= input[idx][0] # gpt가 묶은 쌍 중, 첫번째 질문 (q1,q2) 중 q1
-      q1+=1
+      #q1+=1
       q2= input[idx][1] # gpt가 묶은 쌍 중, 두번째 질문 (q1,q2) 중 q2
-      q2+=1
+      #q2+=1
       q1_type= index[q1][0]
       q2_type= index[q2][0]
 
@@ -50,6 +50,8 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
         read=read_likertXdemo(index=index, data=data, targetQ_id=q2, pInfo_id=q1)
 
         chart_reading[f"{q1},{q2}"]= read
+        chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용']
+        chart_reading[f"{q1},{q2}"][f'{q2}']= json_result[q2-1]['질문 내용']
         save2json(folder_name, chart_reading) # json파일 로컬에 저장
 
       elif q2_type in personal_info:
@@ -57,11 +59,25 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
         read=read_likertXdemo(index=index, data=data, targetQ_id=q1, pInfo_id=q2)
 
         chart_reading[f"{q1},{q2}"]= read
+        chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용']
+        chart_reading[f"{q1},{q2}"][f'{q2}']= json_result[q2-1]['질문 내용']
         save2json(folder_name, chart_reading) # json파일 로컬에 저장
 
       # 2. 둘 다 '객관식 질문' 혹은 '평가형' 경우 -> label 길이에 따라 horizontal/vertical
-      elif q1_type in valid_types and q2_type in valid_types:
+      elif (q1_type in valid_types) and (q2_type in valid_types):
         #likert2likert함수에 들어갈 category_name 생성 부분
+        #q1
+        q1_categories_raw = index[q1][1]
+        q1_parsed = ast.literal_eval(q1_categories_raw)
+
+        if isinstance(q1_parsed, dict):
+            q1_categories = list(q1_parsed.values())  # 질문 유형이 '평가형'이어서 index가 딕셔너리일 경우 value만 추출
+        elif isinstance(q1_parsed, list):
+            q1_categories = q1_parsed  # 질문 유형이 '객관식 질문'이어서 index가 리스트면 그대로 사용
+        else:
+            raise ValueError("지원하지 않는 Q1 Category 형식입니다.")
+        
+        #q2
         q2_categories_raw = index[q2][1]
         q2_parsed = ast.literal_eval(q2_categories_raw)
 
@@ -71,21 +87,28 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
             q2_categories = q2_parsed  # 질문 유형이 '객관식 질문'이어서 index가 리스트면 그대로 사용
         else:
             raise ValueError("지원하지 않는 q2_categories 형식입니다.")
+        
+        q1_label_len=np.mean([len(label) for label in q1_categories])
+        q2_label_len=np.mean([len(label) for label in q2_categories])
 
-
-        temp = cross_response_dist(index, data,  q1, q2)
-
-        # 레이블이 길 경우 → 가로 막대 그래프
-        if (np.mean([len(label) for label in data[q1].unique()]) > 4) or (np.mean([len(label) for label in data[q2].unique()]) > 4):
-          cross_likertXlikert_h(temp, q2_categories,  q1, q2, folder_name, design=design)
-          read=read_likertXlikert(temp,q2_categories,  q1, q2)
+        # 레이블이 길 경우 → 가로 막대 그래프(q1, q2 중 레이블 길이가 더 긴 문항 =base q로 설정. 추후에 레이블의 개수나 응답 비율 비교를 통해 세분화 가능.)
+        if (q1_label_len > 4) or (q2_label_len > 4):
+          if q1_label_len >= q2_label_len:
+            temp = cross_response_dist(index, data,  q1, q2)
+            cross_likertXlikert_h(temp, q2_categories,  q1, q2, folder_name, design=design)
+            read=read_likertXlikert(temp,q2_categories,  q1, q2)
+          else:
+            temp = cross_response_dist(index, data,  q2, q1)
+            cross_likertXlikert_h(temp, q2_categories,  q2, q1, folder_name, design=design)
+            read=read_likertXlikert(temp,q1_categories,  q2, q1)
 
         else:
           cross_likertXlikert(temp, q2_categories,  q1, q2,folder_name, design=design)
           read=read_likertXlikert(temp, q2_categories,  q1, q2)
 
         chart_reading[f"{q1},{q2}"]= read
-        
+        chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용']
+        chart_reading[f"{q1},{q2}"][f'{q2}']= json_result[q2-1]['질문 내용']
         save2json(folder_name, chart_reading)
 
       # 기타 타입일 경우는 필요에 따라 여기에 조건 추가 가능

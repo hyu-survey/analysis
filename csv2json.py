@@ -40,8 +40,11 @@ def survey_result(file, folder_name, json_name):
         else:
             q_text = q_text_raw  # 혹시 매칭 안 되면 원본 사용
 
+        if q_type=='개인정보':
+            entry=entry = {"질문 번호": question_num, "질문 유형": q_type}
+            question_num+=1
+        
         entry = {"질문 번호": question_num, "질문 내용": q_text, "질문 유형": q_type}
-        question_num+=1
 
         # 질문 유형이 '단답형', '장문형'인 경우에 json 파일에 '답변'과 'null'값만 저장 
         if q_type == '단답형' or q_type == '장문형':

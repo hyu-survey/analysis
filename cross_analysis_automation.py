@@ -29,7 +29,6 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
     question_df=pd.DataFrame(question_list)
     index=pd.concat([index,question_df.T], axis=0,ignore_index=True)
 
-
     chart_reading={} # ->.json : 차트 내용 읽어오는 딕셔너리
     valid_types = ['객관식 질문', '평가형'] # horizontal/vertical 차트
 
@@ -52,16 +51,16 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
         chart_reading[f"{q1},{q2}"]= read
         chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용']
         chart_reading[f"{q1},{q2}"][f'{q2}']= json_result[q2-1]['질문 내용']
-        save2json(folder_name, chart_reading) # json파일 로컬에 저장
+        #save2json(folder_name, chart_reading) # json파일 로컬에 저장
 
       elif q2_type in personal_info:
         cross_likertXdemo(index=index, data=data, targetQ_id=q1, pInfo_id=q2, folder_name=folder_name, design=design)
         read=read_likertXdemo(index=index, data=data, targetQ_id=q1, pInfo_id=q2)
 
         chart_reading[f"{q1},{q2}"]= read
-        chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용']
+        chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용'] # json indexing 0부터 시작 -> q1-1
         chart_reading[f"{q1},{q2}"][f'{q2}']= json_result[q2-1]['질문 내용']
-        save2json(folder_name, chart_reading) # json파일 로컬에 저장
+        #save2json(folder_name, chart_reading) # json파일 로컬에 저장
 
       # 2. 둘 다 '객관식 질문' 혹은 '평가형' 경우 -> label 길이에 따라 horizontal/vertical
       elif (q1_type in valid_types) and (q2_type in valid_types):
@@ -92,27 +91,31 @@ def GeneratePlotsForCross(data, json_result, input, personal_info,folder_name,de
         q2_label_len=np.mean([len(label) for label in q2_categories])
 
         # 레이블이 길 경우 → 가로 막대 그래프(q1, q2 중 레이블 길이가 더 긴 문항 =base q로 설정. 추후에 레이블의 개수나 응답 비율 비교를 통해 세분화 가능.)
+        temp = cross_response_dist(index, data,  q1, q2)
+
         if (q1_label_len > 4) or (q2_label_len > 4):
           if q1_label_len >= q2_label_len:
-            temp = cross_response_dist(index, data,  q1, q2)
             cross_likertXlikert_h(temp, q2_categories,  q1, q2, folder_name, design=design)
             read=read_likertXlikert(temp,q2_categories,  q1, q2)
           else:
             temp = cross_response_dist(index, data,  q2, q1)
-            cross_likertXlikert_h(temp, q2_categories,  q2, q1, folder_name, design=design)
+            cross_likertXlikert_h(temp, q1_categories,  q2, q1, folder_name, design=design)
             read=read_likertXlikert(temp,q1_categories,  q2, q1)
 
         else:
-          cross_likertXlikert(temp, q2_categories,  q1, q2,folder_name, design=design)
-          read=read_likertXlikert(temp, q2_categories,  q1, q2)
+          cross_likertXlikert(temp, q2_categories, q1, q2, folder_name, design=design)
+          read=read_likertXlikert(temp, q2_categories, q1, q2)
 
         chart_reading[f"{q1},{q2}"]= read
         chart_reading[f"{q1},{q2}"][f'{q1}']= json_result[q1-1]['질문 내용']
         chart_reading[f"{q1},{q2}"][f'{q2}']= json_result[q2-1]['질문 내용']
-        save2json(folder_name, chart_reading)
+        #save2json(folder_name, chart_reading)
 
       # 기타 타입일 경우는 필요에 따라 여기에 조건 추가 가능
       else:
         print(f"아직 정의되지 않은 질문 유형 조합입니다: {q1_type}, {q2_type}")
 
       idx += 1
+
+    save2json(folder_name, chart_reading) # json파일 로컬에 저장 
+
